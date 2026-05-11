@@ -230,13 +230,9 @@ class TimeSeries(Dataset):
             self.metadata["col_known"][col] = "K" if col in self._known else "U"
 
         # Expose cardinalities for each categorical variable
-        self.metadata["categorical_cardinalities"] = {}
-        for col in self._cat:
-            encoder = self._categorical_encoders.get(col)
-            if encoder is not None and hasattr(encoder, "classes_"):
-                self.metadata["categorical_cardinalities"][col] = len(encoder.classes_)
-            else:
-                self.metadata["categorical_cardinalities"][col] = 0
+        self.metadata["categorical_cardinalities"] = {
+            col: len(self._categorical_encoders[col].classes_) for col in self._cat
+        }
 
     def __len__(self) -> int:
         """Return number of time series in the dataset."""
