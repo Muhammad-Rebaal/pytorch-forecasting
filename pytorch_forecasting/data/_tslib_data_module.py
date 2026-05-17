@@ -720,8 +720,6 @@ class TslibDataModule(LightningDataModule):
                 "Please provide a non-empty dataset."
             )
 
-        self._resolve_categorical_encoders()
-
         # this is a very rudimentary way to handle the splits when
         # the dataset is of size equal to 1 or 2.
         self._indices = torch.randperm(total_series)
