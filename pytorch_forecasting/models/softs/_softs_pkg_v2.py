@@ -13,8 +13,9 @@ class Softs_pkg_v2(Base_pkg):
 
     _tags = {
         "info:name": "SOFTS",
+        "info:y_type": ["numeric"],
         "info:compute": 2,
-        "author": ["Muhammad-Rebaal"],
+        "authors": ["Secilia-Cxy", "Muhammad-Rebaal"],
         "capability:exogenous": True,
         "capability:multivariate": True,
         "capability:pred_int": True,
@@ -32,82 +33,55 @@ class Softs_pkg_v2(Base_pkg):
     @classmethod
     def get_datamodule_cls(cls):
         """Get the underlying DataModule class."""
-        from pytorch_forecasting.data._tslib_data_module import TslibDataModule
+        from pytorch_forecasting.data.data_module import TslibDataModule
 
         return TslibDataModule
 
     @classmethod
-    def _get_test_datamodule_from(cls, trainer_kwargs):
-        """Create test dataloaders from trainer_kwargs - following v1 pattern."""
-        from pytorch_forecasting.data._tslib_data_module import TslibDataModule
-        from pytorch_forecasting.tests._data_scenarios import (
-            data_with_covariates_v2,
-            make_datasets_v2,
-        )
-
-        data_with_covariates = data_with_covariates_v2()
-        data_loader_default_kwargs = dict(
-            target="target",
-            group_ids=["agency_encoded", "sku_encoded"],
-            add_relative_time_idx=True,
-        )
-
-        data_loader_kwargs = trainer_kwargs.get("data_loader_kwargs", {})
-        data_loader_default_kwargs.update(data_loader_kwargs)
-
-        datasets_info = make_datasets_v2(
-            data_with_covariates, **data_loader_default_kwargs
-        )
-
-        training_dataset = datasets_info["training_dataset"]
-        validation_dataset = datasets_info["validation_dataset"]
-
-        context_length = data_loader_kwargs.get("context_length", 8)
-        prediction_length = data_loader_kwargs.get("prediction_length", 2)
-        batch_size = data_loader_kwargs.get("batch_size", 2)
-
-        train_datamodule = TslibDataModule(
-            time_series_dataset=training_dataset,
-            context_length=context_length,
-            prediction_length=prediction_length,
-            batch_size=batch_size,
-            train_val_test_split=(0.8, 0.2, 0.0),
-        )
-
-        val_datamodule = TslibDataModule(
-            time_series_dataset=validation_dataset,
-            context_length=context_length,
-            prediction_length=prediction_length,
-            batch_size=batch_size,
-            train_val_test_split=(0.0, 1.0, 0.0),
-        )
-
-        test_datamodule = TslibDataModule(
-            time_series_dataset=validation_dataset,
-            context_length=context_length,
-            prediction_length=prediction_length,
-            batch_size=batch_size,
-            train_val_test_split=(0.0, 0.0, 1.0),
-        )
-
-        train_datamodule.setup("fit")
-        val_datamodule.setup("fit")
-        test_datamodule.setup("test")
-
-        return {
-            "train": train_datamodule.train_dataloader(),
-            "val": val_datamodule.val_dataloader(),
-            "test": test_datamodule.test_dataloader(),
-            "data_module": train_datamodule,
-        }
-
-    @classmethod
     def get_test_train_params(cls):
+        """Return testing parameter settings for the trainer.
+
+        Returns
+        -------
+        list of dict
+            Each dict is a valid set of constructor arguments for ``Softs``.
+            The key ``datamodule_cfg`` is passed to the DataModule, not the model.
+        """
+        from pytorch_forecasting.metrics import SMAPE, QuantileLoss
+
         params = [
             {},
-            dict(hidden_size=128, n_layers=1, use_revin=True),
+            dict(hidden_size=64, d_core=64, d_ff=256, n_layers=1),
+            dict(hidden_size=128, n_layers=1, use_revin=False),
+            dict(
+                hidden_size=64,
+                n_layers=1,
+                loss=QuantileLoss(quantiles=[0.1, 0.5, 0.9]),
+            ),
+            dict(
+                hidden_size=64,
+                n_layers=1,
+                use_revin=False,
+                loss=QuantileLoss(quantiles=[0.1, 0.5, 0.9]),
+            ),
+            dict(hidden_size=64, dropout=0.0, n_layers=1),
+            dict(datamodule_cfg=dict(context_length=16, prediction_length=4)),
+            dict(
+                optimizer="adamw",
+                lr_scheduler="cosine_annealing",
+                lr_scheduler_params={"T_max": 5},
+            ),
+            dict(
+                optimizer="adagrad",
+                optimizer_params={"lr": 1e-3},
+            ),
+            dict(hidden_size=64, n_layers=1, logging_metrics=[SMAPE()]),
         ]
+
         default_dm_cfg = {"context_length": 8, "prediction_length": 2}
+
         for param in params:
-            param["datamodule_cfg"] = default_dm_cfg
+            current_dm_cfg = param.get("datamodule_cfg", {})
+            param["datamodule_cfg"] = {**default_dm_cfg, **current_dm_cfg}
+
         return params

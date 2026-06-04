@@ -15,6 +15,33 @@ from pytorch_forecasting.models.base._tslib_base_model_v2 import TslibBaseModel
 class Softs(TslibBaseModel):
     """
     SOFTS: Efficient Multivariate Time Series Forecasting with Series-Core Fusion.
+
+    GitHub Link: https://github.com/Secilia-Cxy/SOFTS/
+
+    Research Paper: https://arxiv.org/abs/2404.14197
+
+    Parameters
+    ----------
+    hidden_size: int
+        Embedding size of individual time series channel, default = 512
+    d_core: int
+        Hidden dimension of the central core node, default = 512
+    d_ff: int
+        Dimension of the feed-forward network, default = 2048
+    n_layers: int
+        Number of encoder layers, default = 2
+    dropout: float
+        Dropout rate, default = 0.1
+    use_revin: bool
+        Whether to use RevIN, default = True
+    optimizer: Optimizer | str
+        Optimizer to use for training, default = "adam"
+    optimizer_params: dict | None
+        Parameters for the optimizer, default = None
+    lr_scheduler: str | None
+        Learning rate scheduler to use, default = None
+    lr_scheduler_params: dict | None
+        Parameters for the learning rate scheduler, default = None
     """
 
     @classmethod
@@ -61,14 +88,14 @@ class Softs(TslibBaseModel):
         self._init_network(hidden_size, d_core, d_ff, n_layers, dropout)
 
     def _init_network(self, d_model, d_core, d_ff, n_layers, dropout):
-        # 1. Normalization
+        # Normalization
         if self.use_revin:
             self.revin = RevIN(num_features=self.cont_dim + self.target_dim)
 
-        # 2. Embedding Layer
-        self.embedding = nn.Linear(1, d_model)  # Each variate treated independently
+        # Embedding Layer
+        self.embedding = nn.Linear(1, d_model)
 
-        # 3. Encoder Blocks
+        # Encoder Blocks
         self.encoder = nn.ModuleList(
             [
                 SoftsEncoderLayer(
@@ -78,7 +105,7 @@ class Softs(TslibBaseModel):
             ]
         )
 
-        # 4. Final Projection
+        # Final Projection
         self.projection = nn.Linear(
             self.context_length * d_model, self.prediction_length * self.n_quantiles
         )
@@ -98,15 +125,15 @@ class Softs(TslibBaseModel):
             target_indices = list(range(current_idx, current_idx + n_targets))
             available_features.append(x["history_target"])
 
-        input_data = torch.cat(available_features, dim=-1)  # [B, L, C]
+        input_data = torch.cat(available_features, dim=-1)
 
         # RevIN
         if self.use_revin:
             input_data = self.revin(input_data, mode="norm")
 
         # Independent projection for channels: [B, C, L, d_model]
-        x_enc = input_data.permute(0, 2, 1).unsqueeze(-1)  # [B, C, L, 1]
-        x_enc = self.embedding(x_enc)  # [B, C, L, d_model]
+        x_enc = input_data.permute(0, 2, 1).unsqueeze(-1)
+        x_enc = self.embedding(x_enc)
 
         # Process through SOFTS STAD Encoder
         for layer in self.encoder:
@@ -114,15 +141,15 @@ class Softs(TslibBaseModel):
 
         # Output projection
         B, C, L, D = x_enc.shape
-        x_enc = x_enc.reshape(B, C, -1)  # [B, C, L * d_model]
-        out = self.projection(x_enc)  # [B, C, Pred_Len * quantiles]
+        x_enc = x_enc.reshape(B, C, -1)
+        out = self.projection(x_enc)
 
         # Reshape for predictions
         out = out.reshape(B, C, self.prediction_length, self.n_quantiles)
-        out = out.permute(0, 2, 1, 3)  # -> [B, Pred_len, C, quantiles]
+        out = out.permute(0, 2, 1, 3)
 
         if self.n_quantiles == 1:
-            out = out.squeeze(-1)  # -> [B, Pred_len, C]
+            out = out.squeeze(-1)
 
         # De-normalize
         if self.use_revin:
