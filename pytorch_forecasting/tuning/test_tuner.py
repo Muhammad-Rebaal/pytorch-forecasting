@@ -1,9 +1,11 @@
 """Tests for the v2 HyperparameterTuner."""
 
 import numpy as np
-import optuna
 import pandas as pd
 import pytest
+from skbase.utils.dependencies import _safe_import
+
+optuna = _safe_import("optuna")
 
 from pytorch_forecasting.data import TimeSeries
 from pytorch_forecasting.tuning.hyperparameter_tuner import HyperparameterTuner
