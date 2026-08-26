@@ -6,7 +6,7 @@ from pytorch_forecasting.layers._blocks._softs_block import (
 )
 
 __all__ = [
-    "ResidualBlock", 
+    "ResidualBlock",
     "ModernTCNBlock",
     "SCIBlock",
     "STADModule",
