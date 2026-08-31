@@ -33,11 +33,17 @@ class HyperparameterTuner:
         self.fixed_hparams = fixed_hparams
         self._validate_fixed_hparams()
 
+        expected_dm_cls = model_cls.get_datamodule_cls()
+
         if isinstance(data, TimeSeries):
-            datamodule_cls = model_cls.get_datamodule_cls()
-            self.datamodule = datamodule_cls(data)
+            self.datamodule = expected_dm_cls(data)
             self.datamodule.setup(stage="fit")
         elif isinstance(data, LightningDataModule):
+            if not isinstance(data, expected_dm_cls):
+                raise TypeError(
+                    f"{model_cls.__name__} requires a {expected_dm_cls.__name__}, "
+                    f"got {type(data).__name__}."
+                )
             data.setup("fit")
             self.datamodule = data
         else:

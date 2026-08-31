@@ -99,6 +99,24 @@ class TestInitAndValidation:
                 model_cls=TFT, data=encoder_decoder_datamodule, hiddne_size=128
             )
 
+    def test_mismatched_datamodule_tslib_to_tft_raises(self, tslib_datamodule):
+        with pytest.raises(
+            TypeError,
+            match="TFT requires a EncoderDecoderTimeSeriesDataModule, "
+            "got TslibDataModule",
+        ):
+            HyperparameterTuner(model_cls=TFT, data=tslib_datamodule)
+
+    def test_mismatched_datamodule_encdec_to_dlinear_raises(
+        self, encoder_decoder_datamodule
+    ):
+        with pytest.raises(
+            TypeError,
+            match="DLinear requires a TslibDataModule, "
+            "got EncoderDecoderTimeSeriesDataModule",
+        ):
+            HyperparameterTuner(model_cls=DLinear, data=encoder_decoder_datamodule)
+
 
 class TestHyperparameterDiscovery:
     """Search space auto-discovery and parameter filtering."""
