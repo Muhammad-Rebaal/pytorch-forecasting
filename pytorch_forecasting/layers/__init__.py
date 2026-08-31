@@ -7,7 +7,11 @@ from pytorch_forecasting.layers._attention import (
     FullAttention,
     TriangularCausalMask,
 )
-from pytorch_forecasting.layers._blocks import ResidualBlock, _TransformerBlock
+from pytorch_forecasting.layers._blocks import (
+    FreTSCore,
+    ResidualBlock,
+    _TransformerBlock,
+)
 from pytorch_forecasting.layers._decomposition import SeriesDecomposition
 from pytorch_forecasting.layers._embeddings import (
     DataEmbedding_inverted,
@@ -64,5 +68,6 @@ __all__ = [
     "RevIN",
     "ResidualBlock",
     "embedding_cat_variables",
+    "FreTSCore",
     "FullyConnectedModule",
 ]
