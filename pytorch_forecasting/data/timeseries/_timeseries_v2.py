@@ -154,6 +154,27 @@ class TimeSeries(Dataset):
         self._unknown = _coerce_to_list(unknown)
         self._static = _coerce_to_list(static)
 
+        self._prepare_categorical_encoders()
+        self._prepare_group_index()
+        self._prepare_metadata()
+
+        # overwrite __init__ params for upwards compatibility with AS PRs
+        # todo: should we avoid this and ensure classes are dataclass-like?
+        self.group = self._group
+        self.target = self._target
+        self.num = self._num
+        self.cat = self._cat
+        self.known = self._known
+        self.unknown = self._unknown
+        self.static = self._static
+
+    def _prepare_categorical_encoders(self):
+        """Resolve encoder objects for each categorical column, fit and apply.
+
+        Populates ``self._categorical_encoders`` and transforms the
+        categorical columns in ``self.data`` (and ``self.data_future``
+        when present) to integer codes in-place.
+        """
         if self.categorical_encoders is False:
             self._categorical_encoders = {}
 
@@ -192,9 +213,12 @@ class TimeSeries(Dataset):
             if self.data_future is not None and col in self.data_future.columns:
                 self.data_future[col] = encoder.transform(self.data_future[col])
 
+    def _prepare_group_index(self):
+        """Compute feature columns, group structure,
+        and group-to-index mapping."""
         self.feature_cols = [
             col
-            for col in data.columns
+            for col in self.data.columns
             if col not in [self.time] + self._group + [self.weight] + self._target
         ]
         if self._group:
@@ -210,18 +234,6 @@ class TimeSeries(Dataset):
             self._group_ids = ["_single_group"]
         # create mapping from group id to index for efficient lookup
         self._group_to_idx = {gid: i for i, gid in enumerate(self._group_ids)}
-
-        self._prepare_metadata()
-
-        # overwrite __init__ params for upwards compatibility with AS PRs
-        # todo: should we avoid this and ensure classes are dataclass-like?
-        self.group = self._group
-        self.target = self._target
-        self.num = self._num
-        self.cat = self._cat
-        self.known = self._known
-        self.unknown = self._unknown
-        self.static = self._static
 
     def _prepare_metadata(self):
         """Prepare metadata for the dataset.
