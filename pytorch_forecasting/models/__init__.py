@@ -10,6 +10,7 @@ from pytorch_forecasting.models.base import (
 )
 from pytorch_forecasting.models.baseline import Baseline
 from pytorch_forecasting.models.deepar import DeepAR
+from pytorch_forecasting.models.frets import FreTS, FreTS_pkg_v2
 from pytorch_forecasting.models.mlp import DecoderMLP
 from pytorch_forecasting.models.modern_tcn import ModernTCN
 from pytorch_forecasting.models.nbeats import NBeats, NBeatsKAN
@@ -60,4 +61,6 @@ __all__ = [
     "SCINet_v2",
     "SCINet_pkg_v2",
     "ModernTCN",
+    "FreTS",
+    "FreTS_pkg_v2",
 ]
